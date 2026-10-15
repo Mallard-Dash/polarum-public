@@ -1,0 +1,9 @@
+__pycache__/
+*.py[cod]
+.venv/
+.idea/
+.vscode/
+*.log
+# Local config may contain real hostnames/IPs/MACs; never commit it.
+/nodes.local.toml
+/local/

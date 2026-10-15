@@ -1,0 +1,23 @@
+NOTE: This is only a simulation!
+      apt-get needs root privileges for real execution.
+      Keep also in mind that locking is deactivated,
+      so don't depend on the relevance to the real current situation!
+Reading package lists...
+Building dependency tree...
+Reading state information...
+Calculating upgrade...
+The following packages have been kept back:
+  linux-headers-amd64 firmware-misc-nonfree
+The following NEW packages will be installed:
+  proxmox-kernel-6.8.12-4-pve-signed
+The following packages will be REMOVED:
+  libold1
+The following packages will be upgraded:
+  libc6 pve-manager docker-ce
+4 upgraded, 1 newly installed, 1 to remove and 2 not upgraded.
+Inst libc6 [2.36-9] (2.36-9+deb12u4 Debian-Security:12/stable-security, Debian:12.5/stable [amd64])
+Inst proxmox-kernel-6.8.12-4-pve-signed (6.8.12-4 Proxmox:bookworm/stable [amd64])
+Inst pve-manager [8.1.4] (8.1.5 Proxmox:8.1/stable [all]) []
+Inst docker-ce [5:24.0.0-1] (5:25.0.0-1 Docker:bookworm/stable [amd64])
+Remv libold1 [1.0-1] [foo]
+Conf libc6 (2.36-9+deb12u4 Debian-Security:12/stable-security, Debian:12.5/stable [amd64])

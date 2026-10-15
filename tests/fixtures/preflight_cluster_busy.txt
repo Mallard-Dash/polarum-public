@@ -1,0 +1,38 @@
+@@uptime rc=0
+up 3 weeks, 2 days, 4 hours
+@@qm rc=0
+      VMID NAME                 STATUS     MEM(MB)    BOOTDISK(GB) PID
+       100 vm-web               running    4096              32.00 1234
+       101 vm-db                running    8192              64.00 2345
+       102 vm-old               stopped    2048              16.00 0
+@@pct rc=0
+VMID       Status     Lock         Name
+200        running                 ct-dns
+201        stopped                 ct-test
+@@vzdump rc=0
+4242
+@@zpool rc=0
+  pool: rpool
+ state: ONLINE
+  scan: scrub in progress since Wed Oct  7 01:00:01 2026
+	120G scanned at 1.2G/s, 60G issued, 50% done
+config:
+@@pvecm rc=0
+Cluster information
+-------------------
+Name:             lab-cluster
+Config Version:   3
+Transport:        knet
+
+Quorum information
+------------------
+Nodes:            3
+Quorate:          Yes
+
+Votequorum information
+----------------------
+Expected votes:   3
+Highest expected: 3
+Total votes:      3
+Quorum:           2  
+Flags:            Quorate 

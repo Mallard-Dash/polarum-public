@@ -1,0 +1,7 @@
+@@uptime rc=0
+up 2 days, 1 hour
+@@qm rc=127
+@@pct rc=127
+@@vzdump rc=1
+@@zpool rc=127
+@@pvecm rc=127

@@ -1,0 +1,75 @@
+# Polarum example configuration.
+# Copy to ~/.config/polarum/nodes.toml and adjust. All values below are placeholders.
+
+[settings]
+# SSH host (an alias from ~/.ssh/config or user@host) of a machine on the same
+# LAN as your nodes. It sends the Wake-on-LAN magic packet on your behalf.
+# Leave it empty or remove it to broadcast the packet directly from this
+# machine over UDP (this machine must then be on the nodes' LAN segment).
+relay = "relay-host"
+# Broadcast address of the nodes' subnet.
+relay_broadcast = "192.168.1.255"
+# Command on the relay host that sends the magic packet.
+relay_wol_command = "wakeonlan"
+# Seconds to wait for a woken node to come online before showing WAKE TIMEOUT
+# (you can then press W to resend the magic packet). Default: 180.
+wake_timeout = 180
+
+# Per-node keys: name, ip, mac (required); ssh_host (default: ip); ssh_user
+# (default: "polarum"); health_ports; update_order and canary (used by the
+# update feature). Unknown keys are rejected at startup.
+# Update feature (U = check selected node, Shift+U = check all nodes that have
+# an update_order). Checking is read-only; installing needs a typed confirmation.
+[settings.update]
+# A package may only come from these apt origins. If ANY of a package's origins
+# is missing here, installing requires typing "override" instead of "proceed".
+allowed_origins = ["Debian", "Debian-Security", "Proxmox"]
+# Packages that would be removed also require "override" when true.
+block_on_removals = true
+# Take a ZFS snapshot of the root dataset before upgrading each node. If the
+# root is not ZFS or the snapshot fails, a notice is logged and the run continues...
+snapshot_before = true
+# ...unless this is true: then the run stops instead.
+require_snapshot = false
+# Seconds all health_ports must take to come back after an upgrade or reboot.
+health_timeout = 300
+# "manual":    only mark the node REBOOT NEEDED; you press B yourself (default)
+# "if_needed": reboot automatically, wait for down and up, then health-check
+# "never":     ignore reboot requirements
+reboot_policy = "manual"
+# Warn (yellow) when a node has more pending updates than this.
+many_updates_threshold = 50
+
+# Per-node keys: name, ip, mac (required); ssh_host (default: ip); ssh_user
+# (default: "polarum"); health_ports; update_order and canary (update feature).
+# Unknown keys are rejected at startup.
+#
+# update_order: unique positive integers; nodes are updated one at a time in
+#   ascending order. Nodes without it are skipped by "check all".
+# canary: true runs this node first (it needs an update_order).
+[[nodes]]
+name = "node-a"
+ip = "192.168.1.11"
+mac = "AA:BB:CC:DD:EE:01"
+ssh_host = "192.168.1.11"
+ssh_user = "polarum"
+# TCP ports that must accept connections for the node to count as ONLINE.
+# Some but not all ports up shows BOOTING. Default: [22].
+health_ports = [22, 8006]
+update_order = 1
+canary = true
+
+[[nodes]]
+name = "node-b"
+ip = "192.168.1.12"
+mac = "AA:BB:CC:DD:EE:02"
+ssh_host = "192.168.1.12"
+ssh_user = "polarum"
+update_order = 2
+
+[[nodes]]
+name = "node-c"
+ip = "192.168.1.13"
+mac = "AA:BB:CC:DD:EE:03"
+ssh_host = "192.168.1.13"
+ssh_user = "polarum"

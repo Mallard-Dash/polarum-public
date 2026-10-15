@@ -1,0 +1,19 @@
+@@uptime rc=0
+up 5 minutes
+@@qm rc=0
+      VMID NAME                 STATUS     MEM(MB)    BOOTDISK(GB) PID
+@@pct rc=1
+sudo: a password is required
+@@vzdump rc=1
+@@zpool rc=0
+no pools available
+@@pvecm rc=0
+Quorum information
+------------------
+Quorate:          Yes
+
+Votequorum information
+----------------------
+Expected votes:   2
+Total votes:      2
+Quorum:           2

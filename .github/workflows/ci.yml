@@ -1,0 +1,72 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  syntax:
+    name: Syntax and lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Byte-compile every Python file
+        run: python -m compileall -q polarum tests polarum_launcher.py
+      - name: Ruff (errors, pyflakes, bugbear, security rules)
+        run: |
+          pip install --quiet ruff==0.6.9
+          ruff check .
+      - name: ShellCheck install.sh
+        run: shellcheck install.sh
+
+  security:
+    name: Security scan
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Bandit (static security analysis)
+        run: |
+          pip install --quiet bandit==1.7.10
+          bandit -q -c pyproject.toml -r polarum
+      - name: Dependency audit
+        # Polarum is standard-library only, so there is nothing to audit today.
+        # This fails the build if a requirements file is ever added without an audit.
+        run: |
+          if ls requirements*.txt >/dev/null 2>&1; then
+            pip install --quiet pip-audit==2.7.3
+            for f in requirements*.txt; do pip-audit -r "$f"; done
+          else
+            echo "No third-party dependencies; nothing to audit."
+          fi
+
+  test:
+    name: Tests (Python ${{ matrix.python }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python: ["3.11", "3.12", "3.13"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+      - name: Unit tests
+        run: python -m unittest discover -s tests -t . -v
+      - name: Config example validates
+        run: python -m polarum --check-config -c nodes.toml

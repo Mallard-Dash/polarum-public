@@ -1,0 +1,14 @@
+@@update rc=0
+Reading package lists...
+@@sim rc=0
+2 upgraded, 1 newly installed, 0 to remove and 0 not upgraded.
+Inst openssl [3.0.11-1~deb12u1] (3.0.11-1~deb12u2 Debian-Security:12/stable-security [amd64])
+Inst tzdata [2024a-0+deb12u1] (2024a-0+deb12u1 Debian:12.5/stable [all])
+Inst linux-image-6.1.0-18-amd64 (6.1.76-1 Debian:12.5/stable [amd64])
+@@kernel rc=0
+6.1.0-17-amd64
+@@boots rc=0
+6.1.0-17-amd64
+6.1.0-16-amd64
+@@rebootreq rc=0
+no
