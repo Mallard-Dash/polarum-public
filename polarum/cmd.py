@@ -20,6 +20,7 @@ from .health import check_node, check_port
 from .preflight import BAD, INFO, NA, WARN, report_lines, run_preflight, summary
 from .reports import TABLE_HEADER, log_reports, node_detail_lines, table_row, verdict_banner
 from .state import BOOTING, ONLINE, classify_ports
+from .textutil import printable
 from .updates import NodeReport, apply_order, check_node_updates, evaluate
 
 EXIT_OK, EXIT_FAIL, EXIT_USAGE, EXIT_BLOCKED = 0, 1, 2, 3
@@ -30,6 +31,7 @@ _ANSI = {INFO: "", WARN: "\x1b[33m", BAD: "\x1b[31;1m", NA: "\x1b[2m"}
 
 def emit(text: str, level: str = INFO, stream=None) -> None:
     stream = stream or sys.stdout
+    text = printable(text)  # remote-supplied text must not carry terminal escapes
     use_color = stream.isatty() and "NO_COLOR" not in os.environ and _ANSI.get(level)
     print(f"{_ANSI[level]}{text}\x1b[0m" if use_color else text, file=stream)
 

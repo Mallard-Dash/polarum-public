@@ -8,6 +8,8 @@ from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
 
+from .textutil import printable
+
 SEPARATOR = " | "
 MAX_FIELD = 300
 
@@ -30,8 +32,7 @@ class Event:
 
 def _clean(text: str) -> str:
     """Single line, no control characters, bounded length."""
-    flat = "".join(ch if ch.isprintable() else " " for ch in text).strip()
-    return flat[:MAX_FIELD]
+    return " ".join(printable(text).split("\n")).strip()[:MAX_FIELD]
 
 
 def parse_line(line: str) -> Event | None:

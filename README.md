@@ -217,11 +217,13 @@ that drops SSH from your laptop looks exactly like a powered-off node.
 
 Everything above works with an ordinary SSH account. Power off, reboot, update
 checks and installs additionally need `sudo` rules on the node. Follow
-[Sudoers](#sudoers-a-dedicated-account-with-narrow-rules) and add only the
-rules you need; the update-apply rule is effectively root, so enable it only on
-nodes you want Polarum to update.
+[Sudoers](#sudoers-a-dedicated-account-with-narrow-rules): generate the rules
+with `polarum --print-sudoers` and install only the ones you need. The
+update-apply rule is commented out by default; enable it only on nodes you want
+Polarum to update.
 
 ```bash
+polarum --print-sudoers > polarum.sudoers   # review, then install on the node
 polarum check node-a      # read-only update check
 polarum -u node-a         # review, type the confirmation word, install
 ```
@@ -401,31 +403,43 @@ give it only what Polarum needs. Verify the real binary paths first
 (`command -v systemctl qm pct pvecm apt-get systemd-run journalctl zfs`) and put
 the rules in `/etc/sudoers.d/polarum` (edit with `visudo -f`).
 
-```text
-# Power off / reboot
-Cmnd_Alias POLARUM_POWER = /usr/bin/systemctl poweroff, /usr/bin/systemctl reboot
+Do not write these by hand. Polarum prints rules built from the exact commands
+it runs. Generate them on the machine where Polarum is installed, review the
+output, then install the file on each node:
 
-# Read-only pre-flight (Proxmox nodes only)
-Cmnd_Alias POLARUM_PREFLIGHT = /usr/sbin/qm list, /usr/sbin/pct list, /usr/bin/pvecm status
-
-# Update check (refreshes package lists; installs nothing)
-Cmnd_Alias POLARUM_CHECK = /usr/bin/apt-get update
-
-# Update apply: see the warning below
-Cmnd_Alias POLARUM_APPLY = /usr/bin/systemd-run *, \
-                           /usr/bin/journalctl -u polarum-upgrade *, \
-                           /usr/sbin/zfs snapshot *
-
-polarum ALL=(root) NOPASSWD: POLARUM_POWER, POLARUM_PREFLIGHT, POLARUM_CHECK
-# Add this line only on nodes where you want Polarum to install updates:
-# polarum ALL=(root) NOPASSWD: POLARUM_APPLY
+```bash
+polarum --print-sudoers --sudoers-user polarum --sudoers-dataset rpool/ROOT/pve-1 > polarum.sudoers
+scp polarum.sudoers admin@node-a:/tmp/       # copy it however you like
+# on the node, as root:
+visudo -cf /tmp/polarum.sudoers && install -m 0440 /tmp/polarum.sudoers /etc/sudoers.d/polarum
 ```
 
-A command with fixed arguments (like `apt-get update`) matches only those exact
-arguments. The apply rules need wildcards, and **`systemd-run *` lets the account
-run any command as root**; see [Security notes](#security-notes). Only power
-control and checks work without the last line, which is a reasonable setup if you
-update by hand.
+Replace the dataset with the node's root dataset (`findmnt -n -o SOURCE /`) and
+check the binary paths with
+`command -v systemctl qm pct pvecm apt-get systemd-run journalctl zfs`. The
+update-apply line is commented out in the output; uncomment it only on nodes
+where Polarum should install updates.
+
+What it grants:
+
+| Alias | Allows | Notes |
+|---|---|---|
+| `POLARUM_POWER` | `systemctl poweroff`, `systemctl reboot` | exact arguments |
+| `POLARUM_PREFLIGHT` | `qm list`, `pct list`, `pvecm status` | read-only, Proxmox only |
+| `POLARUM_CHECK` | `apt-get update` | exact arguments |
+| `POLARUM_APPLY` | the one `systemd-run` command that starts `polarum-upgrade`, its journal tail, and a `zfs snapshot` of **one** dataset | commented out by default |
+
+Every rule is a single complete command line. The only variable parts are the
+12-character run token and the snapshot timestamp, and both use fixed-length `?`
+wildcards, so no extra arguments can be appended. An SSH key that can use these
+rules can power nodes off and start an apt upgrade, but cannot run arbitrary
+commands as root and cannot open a pager through `journalctl`.
+
+> The rules are verified in this project's tests against the commands the code
+> executes, using a model of sudo's matching. They are not exercised against a
+> real `sudo` in CI. Run `visudo -cf` on the file, and test `polarum check <node>`
+> before relying on them; if a rule does not match, the action fails closed with
+> "sudo needs a password".
 
 The relay host needs no sudo: the account only runs `wakeonlan`.
 
@@ -493,7 +507,8 @@ Nodes with nothing to update are left alone.
 ## Security notes
 
 - **apt signature verification protects against tampered packages in transit, not against a malicious upstream.** Polarum's `allowed_origins` rule only checks the repository labels apt reports. It cannot tell you whether a trusted repository itself ships something harmful. The review is a tripwire for surprises (new origins, removals), not a guarantee.
-- **Passwordless sudo for `apt-get` (and certainly for `systemd-run`) is effectively root.** Anyone who can use that account can run arbitrary commands as root on the node. Narrow sudoers rules limit accidents and make the intent explicit; they do not make a stolen key harmless.
+- **An update-capable key can still change a node.** The generated apply rule runs one fixed `apt-get dist-upgrade`, so it is not a general root shell, but whoever holds the key can start an upgrade, and apt maintainer scripts run as root. Do not enable `POLARUM_APPLY` on nodes you do not want Polarum to update. Hand-written wildcard rules such as `systemd-run *` **are** effectively root; use `polarum --print-sudoers` instead.
+- **Remote text is untrusted.** Output from nodes (apt messages, SSH errors, package names) is stripped of control characters before it is shown or logged, so a compromised node cannot redraw your terminal or fake a prompt. The typed confirmation phrase is the last line of defence; read the review before typing it.
 - **Protect the SSH key.** Use a passphrase and an ssh-agent, keep the key on the laptop only, restrict the account to the laptop's address in `sshd` or `authorized_keys` (`from="..."`) where practical, and do not enable the update rule (`POLARUM_APPLY`) on nodes where you do not need it.
 - The event log can reveal your node names and activity. It is created with mode `0600`.
 - Polarum has been exercised against mocked SSH only so far. Test on a non-critical node and keep backups.

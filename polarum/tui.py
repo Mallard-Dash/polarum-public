@@ -5,6 +5,7 @@ import curses
 
 from .preflight import BAD, INFO, NA, WARN
 from .state import LEVEL_BAD, LEVEL_OK, LEVEL_WARN
+from .textutil import printable
 
 STRICT_PHRASE = "proceed"
 PAIR_OK, PAIR_BAD, PAIR_WARN, PAIR_ACCENT = 1, 2, 3, 4
@@ -15,6 +16,7 @@ def put(win, y: int, x: int, text: str, attr: int = 0) -> None:
     h, w = win.getmaxyx()
     if y < 0 or y >= h or x < 0 or x >= w:
         return
+    text = printable(text).replace("\n", " ")
     try:
         win.addstr(y, x, text[:max(0, w - x - 1)], attr)
     except curses.error:

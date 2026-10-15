@@ -43,6 +43,23 @@ UNIT_WRAPPER = (
     "exit $rc"
 )
 
+# The exact privileged commands, as argv lists. The scripts below and the sudoers
+# rules printed by `polarum --print-sudoers` are both built from these.
+JOURNAL_ARGV = ("journalctl", "-u", UNIT_NAME, "-n", "12", "--no-pager", "-o", "cat")
+
+
+def start_argv(token: str) -> list[str]:
+    return [
+        "systemd-run", f"--unit={UNIT_NAME}", "--collect",
+        "--description=Polarum apt dist-upgrade", "--quiet",
+        "--", "sh", "-c", UNIT_WRAPPER, UNIT_NAME, token,
+    ]
+
+
+def snapshot_argv(dataset: str, name: str) -> list[str]:
+    return ["zfs", "snapshot", f"{dataset}@{name}"]
+
+
 POLL_INTERVAL = 3.0
 UNREACHABLE_LIMIT = 600.0     # consecutive seconds without SSH contact before giving up
 UPGRADE_MAX_SECONDS = 7200.0
@@ -105,11 +122,7 @@ def start_script(token: str) -> str:
     """Script that starts the transient unit; refuses if one is already active."""
     if not TOKEN_RE.fullmatch(token):
         raise ValueError("invalid token")
-    run = shlex.join([
-        "systemd-run", f"--unit={UNIT_NAME}", "--collect",
-        "--description=Polarum apt dist-upgrade", "--quiet",
-        "--", "sh", "-c", UNIT_WRAPPER, UNIT_NAME, token,
-    ])
+    run = shlex.join(start_argv(token))
     return (PREAMBLE
             + f'if systemctl is-active --quiet {UNIT_NAME}; then\n'
               f'  echo "{UNIT_NAME} is already running" >&2; exit {ALREADY_RUNNING_RC}\nfi\n'
@@ -121,7 +134,7 @@ printf '@@state rc=0\\n%s\\n' "$(systemctl is-active {UNIT_NAME} 2>&1)"
 printf '@@status rc=0\\n'
 cat {STATUS_FILE} 2>/dev/null
 printf '@@log rc=0\\n'
-$S journalctl -u {UNIT_NAME} -n 12 --no-pager -o cat 2>&1
+$S {shlex.join(JOURNAL_ARGV)} 2>&1
 exit 0
 """
 
@@ -168,7 +181,7 @@ class RemoteOps:
     def snapshot(self, node: Node, dataset: str, name: str) -> SshResult:
         if not DATASET_RE.fullmatch(dataset) or not re.fullmatch(r"[A-Za-z0-9_.:-]+", name):
             return SshResult(1, stderr="refusing unsafe snapshot name")
-        script = PREAMBLE + f"$S zfs snapshot {shlex.quote(dataset + '@' + name)}\n"
+        script = PREAMBLE + f"$S {shlex.join(snapshot_argv(dataset, name))}\n"
         return run_ssh(node.ssh_target, ["sh", "-s"], 60, input_text=script)
 
     def start_unit(self, node: Node, token: str) -> SshResult:

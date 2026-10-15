@@ -10,11 +10,13 @@ import sys
 from pathlib import Path
 
 from . import __version__
-from .config import ConfigError, default_config_path, default_log_path, load_config
+from .config import USER_RE, ConfigError, default_config_path, default_log_path, load_config
 from .events import EventLog
 from .cmd import run_command
 from .cmd_update import cmd_update
+from .sudoers import DEFAULT_DATASET, generate as generate_sudoers
 from .ssh import AGENT_OK, agent_status, ensure_agent
+from .runner import DATASET_RE
 from .state import NodeState
 from .ui import run_ui
 
@@ -29,6 +31,14 @@ def parse_args(argv: list[str] | None) -> argparse.Namespace:
         "--check-config", action="store_true",
         help="validate the configuration and exit")
     parser.add_argument("--version", action="version", version=f"polarum {__version__}")
+    parser.add_argument(
+        "--print-sudoers", action="store_true",
+        help="print narrow sudoers rules for the commands Polarum runs, then exit")
+    parser.add_argument("--sudoers-user", default="polarum", metavar="USER",
+                        help="account the rules are for (default: %(default)s)")
+    parser.add_argument("--sudoers-dataset", default=DEFAULT_DATASET, metavar="DATASET",
+                        help="root ZFS dataset the snapshot rule is limited to "
+                             "(default: %(default)s)")
     parser.add_argument(
         "-u", "--update", metavar="NODE",
         help="update one node (name or IP): check, review, typed confirmation, then install")
@@ -96,6 +106,12 @@ def run_cli_command(args: argparse.Namespace, settings, nodes) -> int:
 
 def main(argv: list[str] | None = None) -> int:
     args = parse_args(argv)
+    if args.print_sudoers:
+        if not (USER_RE.fullmatch(args.sudoers_user) and DATASET_RE.fullmatch(args.sudoers_dataset)):
+            print("polarum: invalid --sudoers-user or --sudoers-dataset", file=sys.stderr)
+            return 2
+        print(generate_sudoers(args.sudoers_user, args.sudoers_dataset), end="")
+        return 0
     path = Path(args.config).expanduser()
     try:
         settings, nodes = load_config(path)
